@@ -1,5 +1,4 @@
-// Sim1553B_chan.cpp : 定义控制台应用程序的入口点。
-//
+// Sim1553B_chan.cpp : 
 
 #include "stdafx.h"
 #include <string.h>
@@ -18,7 +17,6 @@ typedef struct busDataStructure
 	UINT16 len;
 } TMPBUSStructure;
 
-
 TMPBUSStructure buffData;
 
 bool hasRead = false;
@@ -30,8 +28,9 @@ SimRT *rt = NULL;
 
 SimMT *mt = NULL;
 
-UINT16 RTBCMTMode = 4;//Invalid mode
-UINT16 rt_address = 33;//NOTE this is not a valid address
+UINT16 RTBCMTMode = 4;  //Invalid mode
+UINT16 rt_address = 33; //NOTE this is not a valid address
+
 extern "C"  UINT32 Write(UINT64 timestamp, UINT32 Addr, void *data);
 extern "C"  void Init(int argc,const char *argv[],pfun_RecvCheck fromSyn,sim61580irq irq);
 extern "C"  void Step(void);
@@ -74,7 +73,6 @@ char * cStrTrim(char *&str, int len)
 	return str;
 }
 
-
 UINT16 loadConfiguration(const char * filePath,bool isInternalTest)
 {
 	FILE *configureFile = fopen(filePath,"r");
@@ -85,7 +83,7 @@ UINT16 loadConfiguration(const char * filePath,bool isInternalTest)
 	char dataBuff[102400] = {0};
 	char *dataPtr = dataBuff;
 	fread(dataBuff,102400,sizeof(char),configureFile);
-	if (!feof(configureFile))//Buff is insufficient
+	if (!feof(configureFile)) //Buff is insufficient
 	{
 		fclose(configureFile);
 		return 1;
@@ -204,6 +202,7 @@ void internalGenIRQ()
 	return;
 }
 
+// Callback function that can be used to read data from the simbus into memory pointed to by recvData
 UINT32 internalCheckRecv(UINT32 len,void *recvData)
 {
 
@@ -226,21 +225,18 @@ UINT32 internalCheckRecv(UINT32 len,void *recvData)
 		return 0;
 	}
 	return 1;
-	
 }
 
-
-
-
-extern "C"  void Init(int argc,const char *argv[],pfun_RecvCheck fromSyn,sim61580irq irq)
+// Initialize this translation unit to either simulate a BC, RT, or MT based on configure.txt file 
+// located in the same directory
+extern "C"  void Init(int argc,const char *argv[], pfun_RecvCheck fromSyn,sim61580irq irq)
 {
-
 	GenIRQ = irq;
 	CheckRecv = fromSyn;
 	loadConfiguration("configure.txt",false);
-
 }
-extern "C"  void Step(void)
+
+extern "C" void Step(void)
 {
 	if(RTBCMTMode == 0 && bc)//BC
 	{
@@ -255,7 +251,8 @@ extern "C"  void Step(void)
 		mt->mtStep();
 	}
 }
-extern "C"  void Exit(void)
+
+extern "C" void Exit(void)
 {
 	if(RTBCMTMode == 0 && bc)//BC
 	{
@@ -274,7 +271,9 @@ extern "C"  void Exit(void)
 	}
 	
 }
-extern "C"  UINT32 Read(UINT64 timestamp, UINT32 Addr, void *data)
+
+// A raw read from register/memory of the device
+extern "C" UINT32 Read(UINT64 timestamp, UINT32 Addr, void *data)
 {
 	UINT16 realAddr;	
 
@@ -325,13 +324,14 @@ extern "C"  UINT32 Read(UINT64 timestamp, UINT32 Addr, void *data)
 	
 	return *((UINT16*)data);
 }
+
+// A raw write to register/memory of the device
 extern "C"  UINT32 Write(UINT64 timestamp, UINT32 Addr, void *data)
 {
 	UINT16 realAddr;	
 	UINT16 dataU16 = *((UINT16*)data);
 	if(RTBCMTMode == 0 && bc)//BC
 	{
-
 		if (Addr&0XF000)//mem
 		{
 			realAddr=Addr&0XFFF;
@@ -344,8 +344,6 @@ extern "C"  UINT32 Write(UINT64 timestamp, UINT32 Addr, void *data)
 			//llogInfo("Write","Reg 0x%x:0x%x",realAddr,dataU16);
 			return bc->regWriteToAddr(realAddr,dataU16);
 		}
-
-		
 	}
 	else if(RTBCMTMode == 1 && rt)//RT
 	{
@@ -375,6 +373,7 @@ extern "C"  UINT32 Write(UINT64 timestamp, UINT32 Addr, void *data)
 	}
 	return 0;
 }
+
 extern "C"  UINT32 OnData(UINT32 len, void *data)
 {
 	if(RTBCMTMode == 0 && bc)//BC
@@ -428,33 +427,30 @@ extern "C"  void RestoreState()
 	return; 
 }
 
-extern "C"  void AddException(int msgIndex,int typeAndCyc)
+extern "C" void AddException(int msgIndex,int typeAndCyc)
 {
 	int cyc = typeAndCyc&0xFF;
 	int type = ((typeAndCyc&0xFF00) >> 8)%2;
 	struct TransException excep = {msgIndex,cyc,type?DataTypeUnMatchException:TimeOutException,TRUE};
-	if(RTBCMTMode == 0 && bc)//BC
+	if(RTBCMTMode == 0 && bc) //BC
 	{
-
 		bc->addException(excep);
 	}
-	else if(RTBCMTMode == 1 && rt)//RT
+	else if(RTBCMTMode == 1 && rt) //RT
 	{
 		rt->addException(excep);
 	}
-	else if(RTBCMTMode == 2 && mt)//MT
+	else if(RTBCMTMode == 2 && mt) //MT
 	{
 		mt->addException(excep);
 	}
 	llogDebug("Init","Add Exception Msg Index:0x%2x, CYC:0x%2x,Type: %s",msgIndex,cyc,type?"DataTypeUnMatchException":"TimeOutException");
-
 }
 
 UINT16 InfoDump(int len, void * buffAddr)
 {
 	if(RTBCMTMode == 0 && bc)//BC
 	{
-
 		return bc->bcDump(len,buffAddr);
 	}
 	else if(RTBCMTMode == 1 && rt)//RT
@@ -479,6 +475,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	llogInfo("TEST","%u",xx);
 	return 0;
 */
+
+	// Some initial tests of hardware simulation?
 	llogDebug("123","message %d",123);
 	
 	char *testStr = "R      0x1234    0x123456       ";
@@ -493,6 +491,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	
 	CheckRecv = internalCheckRecv;
 	GenIRQ = internalGenIRQ;
+
+	// Iniitalize all devices and save their initial states for future restoration.
 	//Load BC configuration
 	SimBC internalBC("bcconfigure.txt");
 	internalBC.bcSave();
@@ -516,7 +516,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	UINT16 count = 0;
 	UINT16 restoreCount = 0; 
-	while(1)
+	while(true)
 	{
 		internalBC.bcStep();
 		internalRT0.RTStep();
@@ -526,46 +526,49 @@ int _tmain(int argc, _TCHAR* argv[])
 		internalRT4.RTStep();
 		internalMT.mtStep();
 		hasData = false;
+		
+		// Check if any simulated device wrote to the bus
 		if(1 == internalBC.OnData(sizeof(TMPBUSStructure),&buffData)		|| 
 				1 == internalRT0.OnData(sizeof(TMPBUSStructure),&buffData)	||
 				1 == internalRT1.OnData(sizeof(TMPBUSStructure),&buffData)  || 
 				1 == internalRT2.OnData(sizeof(TMPBUSStructure),&buffData)  || 
 				1 == internalRT3.OnData(sizeof(TMPBUSStructure),&buffData)  ||  
-				1 == internalRT4.OnData(sizeof(TMPBUSStructure),&buffData) ||
+				1 == internalRT4.OnData(sizeof(TMPBUSStructure),&buffData)  ||
 				1 == internalMT.OnData(sizeof(TMPBUSStructure),&buffData))
 		{
 			hasData = true;
-			
 		}
-		if (count > 1130)
-		{
-			count = 0;
-			restoreCount++;
-			llogInfo("Restore","Restrore ALL\n\n\n");
-#ifdef WIN32  
 
-			Sleep(2000);
-#else
-			for (int j = 0; j < 1000000; j++)
-			{
-				;
-			}
-#endif
-			internalBC.bcRestore();
-			internalRT0.rtRestore();
-			internalRT1.rtRestore();
-			internalRT2.rtRestore();
-			internalRT3.rtRestore();
-			internalRT4.rtRestore();
-			internalMT.mtRestore();
+		// Check if the devices should be restored to state previous saved
+// 		if (count > 1130)
+// 		{
+// 			count = 0;
+// 			restoreCount++;
+// 			llogInfo("Restore","Restrore ALL\n\n\n");
+// #ifdef WIN32  
+
+// 			Sleep(2000);
+// #else
+// 			for (int j = 0; j < 1000000; j++)
+// 			{
+// 				;
+// 			}
+// #endif
+// 			internalBC.bcRestore();
+// 			internalRT0.rtRestore();
+// 			internalRT1.rtRestore();
+// 			internalRT2.rtRestore();
+// 			internalRT3.rtRestore();
+// 			internalRT4.rtRestore();
+// 			internalMT.mtRestore();
 			
-		}
-		count ++;
-		if (restoreCount > 2)
-		{
-			llogInfo("Restore","Done");
-			return 0;
-		}
+// 		}
+// 		count++;
+// 		if (restoreCount > 2)
+// 		{
+// 			llogInfo("Restore","Done");
+// 			return 0;
+// 		}
 	}
 	return 0;
 }

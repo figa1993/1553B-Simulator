@@ -5,9 +5,12 @@
 #define DATA_TYPE_DATA_WORD 1
 #define DATA_TYPE_STATUS_WORD 2
 #define DATA_TYPE_UNDEFINED_WORD 8
+
+// Forward declare classes so they can be used as friend classes?
 class SimBC;
 class SimRT;
 class SimMT;
+
 class Bus  
 {
 friend class SimRT;
@@ -24,6 +27,8 @@ private:
 };
 //extern UINT32 CheckRecv(UINT32 len,void *recvData);
 extern sim61580irq GenIRQ;
+
+// Export a global function to client's of this class that they should call to read data from the bus?
 extern pfun_RecvCheck CheckRecv;
 
 #endif

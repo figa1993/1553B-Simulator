@@ -29,6 +29,8 @@ SimBC::SimBC(void)
 	m_bcFrameCountA = 0;
 	m_bcFrameCountB = 0;
 	m_bcProcessedMsgCount = 0;
+
+	// Zeroize the ??? memory
 	for(int i = 0; i < MEMSIZE; i++)
 	{
 		Mem::mem[i] = 0;
@@ -120,13 +122,12 @@ INT16 SimBC::initRegAddress(void)
 
 UINT16 SimBC::memWrite(UINT16 addr, UINT16 data) 
 {
-	
-
 	UINT16 returnVal = Mem::memWrite(addr,data);
+
 	if(Reg::configReg_1 & 0x2000) 
 	{
 		if(addr == BC_MSG_CNT_B_ADDR)
-			llogInfo("BC MsgB","Msg Count : %u",0xffff - data);
+		llogInfo("BC MsgB","Msg Count : %u",0xffff - data);
 	}
 	else 
 	{
@@ -144,6 +145,8 @@ UINT16 SimBC::bcDump(int len, void * buffAddr)
 		return 1;
 	}
 	bu61580_sharemem_struct *buffStruct = (bu61580_sharemem_struct*)buffAddr;
+
+	// Dump the register file values
 	for(int i = 0; i <= 0xf; i++)
 	{
 		if (Reg::regRead[i])
@@ -156,6 +159,8 @@ UINT16 SimBC::bcDump(int len, void * buffAddr)
 		}
 		
 	}
+
+	// Dump the on-chip memory contents
 	for (int i = 0; i<= 0xfff; i++)
 	{
 		buffStruct->mem[i] = Mem::mem[i];
@@ -175,7 +180,6 @@ UINT32 SimBC::OnData(UINT32 len, void * data)
 	{ 
 		if(!m_bcIsRetrying)
 		{
-			
 			return m_busChannelB.OnData(len, data);
 		}
 		else if(m_currentRetryCount == 1)
@@ -207,8 +211,8 @@ UINT32 SimBC::OnData(UINT32 len, void * data)
 		return m_busChannelA.OnData(len, data);
 	}
 	return 0;
-	
 }
+
 UINT16 SimBC::memDump()
 {
 	UINT16 msgCount = 0;
@@ -232,9 +236,9 @@ void SimBC::bcStep(void)
 	{
 		//llogDebug("BC","Step");
 		//Init a msg transfer
+		// Determine if a message transfer needs to be initialized
 		if ((m_bcIsRetrying && !m_bcCurrentMsgRetryCyc) || !m_bcCurrentMsgCyc) 
 		{
-			
 			if (m_bcIsRetrying || bcIsRightTimeToStartMSG())
 			{
 				if (!m_bcIsRetrying)
@@ -251,7 +255,6 @@ void SimBC::bcStep(void)
 			if ((m_bcIsRetrying && m_bcCurrentMsgRetryCyc && m_bcCurrentMsgRetryCyc == m_bcCurrentMsgCycCount) || (m_bcCurrentMsgCyc && m_bcCurrentMsgCyc == m_bcCurrentMsgCycCount)) 
 			{
 				bcEndMsg();
-				
 			}
 		}
 		else //It is not the right time to transfer data
@@ -321,8 +324,6 @@ bool SimBC::bcIsRightTimeToStartMSG()
 		{
 			return false;
 		}
-		
-
 	}
 	
 	if ((Reg::configReg_3 & 0X8000) && (Reg::configReg_1 & 0X0010))//Check msg gap
@@ -509,8 +510,6 @@ UINT16 SimBC::bcAnalyzeMsg(void)
 			blockCtrlWord &= 0xFFF8;
 			blockCtrlWord |= 0x0002;
 		}
-		
-			
 	}
 	memWrite(m_msgBlockAddr,blockCtrlWord);
 	Reg::bcCtrlWordReg = blockCtrlWord;
@@ -632,11 +631,13 @@ UINT16 SimBC::bcAnalyzeMsg(void)
 UINT16 SimBC::bcWordTransfer(void)
 {
 	UINT16 blockCtrlWord = Reg::bcCtrlWordReg;
+
+	// Determine which type of message transfer to initialize
 	switch(blockCtrlWord & 0X0007) 
 	{
 		case BC_RT: 
 			{
-				//Transmit 
+				// Transmit 
 				if (m_msgCmdWord & 0x0400) 
 				{
 					bcRTBCTransfer();
@@ -807,17 +808,13 @@ UINT16 SimBC::bcProcessStatusWord(UINT16 statusWord, UINT16 commandWord)
 	return 0;
 }
 
-
-
-
-
-
 UINT16 SimBC::bcBCRTTransfer(void)
 {
 	UINT16 recvCmdWord = memRead(m_msgBlockAddr + 1);
 	UINT16 dataCount = 0;
 	UINT16 time = Reg::timeRecorder & 0xffff;
 	memWrite(Reg::cmdStackPtrReg + 1, time);
+
 	if (recvCmdWord & 0X0001F) 
 	{
 		dataCount = (recvCmdWord & 0x0001f);//Count of data
@@ -827,12 +824,14 @@ UINT16 SimBC::bcBCRTTransfer(void)
 		dataCount = 32;
 	}
 
-	//Recv command
+	// Recv command
 	if ((m_bcIsRetrying && !m_bcCurrentMsgRetryCyc) || !m_bcCurrentMsgCyc) 
 	{
+		// Transmit command word onto the bus preparing destination RT to receive data?
 		bcSetBus(DATA_TYPE_COMMAND_WORD,time,recvCmdWord,1);
 	}
-	else if ((m_bcIsRetrying && m_bcCurrentMsgRetryCyc <= dataCount) || m_bcCurrentMsgCyc <= dataCount) {//Data word
+	else if ((m_bcIsRetrying && m_bcCurrentMsgRetryCyc <= dataCount) || m_bcCurrentMsgCyc <= dataCount) {
+		//Data word
 		UINT16 data;
 		if(m_bcIsRetrying) 
 		{
@@ -1853,6 +1852,7 @@ void SimBC::bcSetBus(UINT16 type,UINT16 time,UINT16 data,UINT16 isFull)
 	wordParse("BC  ",type,time,data);
 	if (Reg::bcCtrlWordReg & 0X0080) 
 	{ 
+		// Transmit the data onto the proper bus
 		if(!m_bcIsRetrying)
 		{
 			m_busChannelB.setBusData(type,time,data,isFull);
@@ -1879,7 +1879,6 @@ void SimBC::bcSetBus(UINT16 type,UINT16 time,UINT16 data,UINT16 isFull)
 				m_busChannelB.setBusData(type,time,data,isFull);
 			}
 		}
-
 	}
 	else 
 	{

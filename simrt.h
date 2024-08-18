@@ -119,17 +119,17 @@ class SimRT:public Reg, public Mem, public Exception1553B
 {
 private:
 	SimRT *m_rtBackUp;
+
 	Bus m_busChannelA;
 	Bus m_busChannelB;
-
-
 	
 	UINT16 m_rtDataIndex;
-	UINT16 m_rtCurrentMsgCycCount;
 
-	UINT16 m_rtCurrentMsgCyc;
-	
+	// Used to store the transmission cycles associated with the last command to transmit?
+	UINT16 m_rtCurrentMsgCycCount; 
 
+	// Used to count how many transmission cycles have been completed since last commanded to transmit?
+	UINT16 m_rtCurrentMsgCyc; 
 	
 	UINT16 m_rtCurrentMsgCmdWord;
 	UINT16 m_rtMsgBlockAddr;

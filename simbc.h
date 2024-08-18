@@ -18,7 +18,7 @@
 #define BC_STACK_POINTER_B_INITIAL_ADDR 0X0106
 #define BC_MSG_CNT_B_INITIAL_ADDR 0X0107
 
-//Totally 94 blocks
+// In Total 94 blocks
 #define BC_MSG_BLOCK_ADDR 0X0108
 #define BC_MSG_BLOCK_PER_LEN 0X0026
 #define BC_MSG_BLOCK_LEN 0X0DF4
@@ -36,7 +36,9 @@ enum msgtype{BC_RT,RT_RT,BCAST,RT_RT_BCAST,MODE_CODE,INVALID_TYPE,MODE_CODE_BCAS
 class SimBC:public Reg, public Mem, public Exception1553B
 {
 private:
-	SimBC *m_bcBackUp;
+	SimBC *m_bcBackUp; // Points to copy that is made when Save is performed and used to Restore to saved state
+
+	// Fields used to actually simulate transmission the physical bus?
 	Bus m_busChannelA;
 	Bus m_busChannelB;
 

@@ -291,5 +291,4 @@ UINT16 Reg::updateTimeReg()
 		return 0;
 	}
 	return 1;
-
 }

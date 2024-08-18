@@ -33,9 +33,11 @@
 #define RT_STATUS_REG_R_ADDR 0x0E
 #define RT_BIT_WORD_REG_R_ADDR 0x0F
 
+// Register file for the BU-61580 device?
 class Reg
 {
 protected:
+	// Fields used to represent the state of the register file's 21 registers
 	UINT16 intMaskReg;
 	UINT16 configReg_1;
 	UINT16 configReg_2;
@@ -63,6 +65,8 @@ protected:
 	bool isHalted;
 	typedef UINT16 (Reg:: *decodefun_w)(UINT16);
 	typedef UINT16 (Reg:: *decodefun_r)(void);
+
+	// Array of function pointers which point to functions that simulate effects of reading/writing to specific registers?
 	decodefun_r regRead[16];
 	decodefun_w regWrite[16];
 	UINT16 updateTimeReg();
@@ -146,15 +150,5 @@ public:
 	virtual INT16 initRegAddress(void) = 0;
 	virtual void genIRQ(void)=0;
 };
-
-
-
-
-
-
-
-
-
-
 
 #endif

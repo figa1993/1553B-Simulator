@@ -26,8 +26,6 @@ SimRT::SimRT(UINT16 addr)
 	m_rtBackUp = NULL;
 	m_rtDataIndex = 0;
 	sprintf(rtDescription,"%s %d","RT",addr);
-
-	
 }
 SimRT::SimRT(UINT16 addr,char *fileName)
 {
@@ -113,11 +111,10 @@ INT16 SimRT::initRegAddress(void)
 
 UINT16 SimRT::RTStep(void)
 {
-
 	if (!Reg::isHalted) 
 	{
 		//llogDebug("RT","Step");
-		UINT16 busData[4]; 
+		UINT16 busData[4]; // Buffer into which bus data is read using CheckRecvHook
 		
 		//llogDebug("EXTERN FUNCTION CALL","CheckRecv(%u,0x%x) = %u",4*sizeof(UINT16),&busData,retValue);
 		if (!m_rtCurrentMsgCyc && !CheckRecvHook(4*sizeof(UINT16),&busData)) //CYC is 1 and the first word is command word
@@ -130,11 +127,10 @@ UINT16 SimRT::RTStep(void)
 				if (address == m_rtAddress || address == 31)
 				{
 					m_rtCurrentMsgCmdWord = busData[1];
-					RTReceiveCMD();    //Init the CYC count
+					RTReceiveCMD();    // Init the CYC count
 					RTStartMsg();
-					RTSingleWordTransfer();//Handle the command word
+					RTSingleWordTransfer(); //Handle the command word
 				}
-				
 			}
 			else //The word type is not a command word, and RT will not init a transfer
 			{
@@ -193,7 +189,7 @@ UINT16 SimRT::rtDump(int len, void * buffAddr)
 
 UINT16 SimRT::RTReceiveCMD()
 {
-	RTCheckCMDType(m_rtCurrentMsgCmdWord);//Init the CYC count
+	RTCheckCMDType(m_rtCurrentMsgCmdWord); // Init the CYC count
 	return 0;
 }
 UINT16 SimRT::RTSingleWordTransfer()
@@ -492,9 +488,6 @@ UINT16 SimRT::RTModeCodeWithOutDataTransfer()
 
 UINT16 SimRT::RTTXTransfer()
 {
-
-
-
 	UINT16 cmd = m_rtCurrentMsgCmdWord;
 	UINT16 subAddress=(cmd>>5)&0X001F;
 	UINT16 time = Reg::timeTagReg;
@@ -539,9 +532,6 @@ UINT16 SimRT::RTTXTransfer()
 		}
 		m_rtDataIndex++;
 	}
-
-
-
 	return 0;
 }
 UINT16 SimRT::RTRXTransfer()
@@ -570,7 +560,7 @@ UINT16 SimRT::RTRXTransfer()
 					if( commandAddress == m_rtAddress || commandAddress == 31)
 					{
 						m_rtCurrentMsgCmdWord = busData[1];
-						m_rtProcessedMsgCount --;//Trick
+						m_rtProcessedMsgCount --; //Trick
 						RTEndMsg();
 						RTReceiveCMD();    //Reinit the CYC count
 						RTStartMsg();
@@ -663,8 +653,11 @@ UINT16 SimRT::RTRXTransfer()
 }
 UINT16 SimRT::RTEndMsg()
 {
+	// Reset the state used to track how many tranmission cycles the RT was commanded to transmit
 	m_rtCurrentMsgCyc = 0;
 	m_rtCurrentMsgCycCount = 0;
+
+
 	Reg::rtLastCmdReg = m_rtCurrentMsgCmdWord;
 	m_rtProcessedMsgCount ++;
 	RTUpdateLookupTable(m_rtCurrentMsgCmdWord);
@@ -813,7 +806,7 @@ UINT16 SimRT::RTLoadSubaddressControlWordAndDataAddress(UINT16 cmdWord)
 			subAddressData = memRead((UINT16)(RT_TX_LOOKUP_TABLE_A_ADDR + subAddress));
 		}
 
-		if(!m_rtCurrentMsgCyc)//This is the first init
+		if(!m_rtCurrentMsgCyc) //This is the first init
 		{
 			memWrite(m_rtMsgBlockAddr + 2,subAddressData);
 		}
@@ -901,12 +894,8 @@ UINT16 SimRT::RTLookupBusyTable(UINT16 cmdWord)
 
 }
 
-
-
 UINT16 SimRT::RTUpdateLookupTable(UINT16 cmd)
 {
-
-	
 	UINT16 address = cmd >> 11;
 	UINT16 subAddress=(cmd >> 5)&0X001F;
 
@@ -932,13 +921,13 @@ UINT16 SimRT::RTUpdateLookupTable(UINT16 cmd)
 		}
 		else if (address == 31)
 		{
-			if (isEnhanceMemManage && (Reg::rtSubAddrCtrlWordReg&0X0007) >= 1) //circle buff
+			if (isEnhanceMemManage && (Reg::rtSubAddrCtrlWordReg&0X0007) >= 1) // circle buff
 			{
 
 				if((stackAddr - stackInitAddr) == (128 - 32))
 				{
 					//RT circular buffer rollover, gen a int
-					Reg::intStatusReg |= 0X0020;/////////////
+					Reg::intStatusReg |= 0X0020;
 					stackAddr = stackInitAddr ;
 				}
 				else
@@ -957,7 +946,7 @@ UINT16 SimRT::RTUpdateLookupTable(UINT16 cmd)
 
 			}
 			else if ((isEnhanceMemManage && isSaDoubleBuffer && (Reg::rtSubAddrCtrlWordReg&0X8007) == 0X8000) || isSaDoubleBuffer)
-			{//double buffer, and the last condition is to check if global double buffer
+			{ //double buffer, and the last condition is to check if global double buffer
 				stackAddr ^= 0X0020;
 				Reg::rtDataStackAddrReg = stackAddr;
 				memWrite(m_rtMsgBlockAddr + 2,stackAddr);
@@ -1217,14 +1206,12 @@ struct TransException SimRT::checkIfException()
 		struct TransException tempExcep = Exception1553B::m_exceptionArray[i];
 		if (tempExcep.isError && tempExcep.messageIndex == msgCount)
 		{
-			
 			if(tempExcep.messageCycCount == m_rtCurrentMsgCyc) 
 			{
 				transExcep = tempExcep;
 				Exception1553B::m_exceptionArray[i].isError = FALSE;
 				break;
 			}
-			
 		}
 	}
 
