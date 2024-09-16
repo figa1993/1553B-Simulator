@@ -269,7 +269,6 @@ extern "C" void Exit(void)
 		delete mt;
 		mt = NULL;
 	}
-	
 }
 
 // A raw read from register/memory of the device

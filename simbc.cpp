@@ -166,7 +166,6 @@ UINT16 SimBC::bcDump(int len, void * buffAddr)
 		buffStruct->mem[i] = Mem::mem[i];
 	}
 	
-	
 	return 0;
 }
 

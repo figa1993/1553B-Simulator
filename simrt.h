@@ -187,7 +187,6 @@ public:
 	UINT32 CheckRecvHook(UINT32 len,void *recvData);
 };
 
-
 #endif
 
 
